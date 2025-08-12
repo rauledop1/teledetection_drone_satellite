@@ -20,14 +20,14 @@ ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
 # Copy requirements first for better caching
-COPY requirements.txt .
+COPY services/file-service/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy shared modules
-COPY ../../shared /app/shared
+COPY shared /app/shared
 
 # Copy application code
-COPY . .
+COPY services/file-service/ .
 
 # Create storage and logs directories
 RUN mkdir -p /app/storage /app/logs
@@ -37,3 +37,4 @@ EXPOSE 8002
 
 # Run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
+

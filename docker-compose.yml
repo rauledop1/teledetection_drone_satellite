@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # Database Services
@@ -40,8 +40,8 @@ services:
   # API Gateway
   api-gateway:
     build:
-      context: ./services/api-gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/api-gateway/Dockerfile
     container_name: teledetection_api_gateway
     ports:
       - "8000:8000"
@@ -62,8 +62,8 @@ services:
   # Authentication Service
   auth-service:
     build:
-      context: ./services/auth-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/auth-service/Dockerfile
     container_name: teledetection_auth
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -83,8 +83,8 @@ services:
   # File Management Service
   file-service:
     build:
-      context: ./services/file-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/file-service/Dockerfile
     container_name: teledetection_file_service
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -105,8 +105,8 @@ services:
   # WebODM Integration Service
   webodm-service:
     build:
-      context: ./services/webodm-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/webodm-service/Dockerfile
     container_name: teledetection_webodm
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -127,8 +127,8 @@ services:
   # Google Earth Engine Service
   gee-service:
     build:
-      context: ./services/gee-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/gee-service/Dockerfile
     container_name: teledetection_gee
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -149,8 +149,8 @@ services:
   # Processing Pipeline Service
   processing-service:
     build:
-      context: ./services/processing-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/processing-service/Dockerfile
     container_name: teledetection_processing
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -172,8 +172,8 @@ services:
   # Analysis Service
   analysis-service:
     build:
-      context: ./services/analysis-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/analysis-service/Dockerfile
     container_name: teledetection_analysis
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
@@ -193,8 +193,8 @@ services:
   # Visualization Service
   visualization-service:
     build:
-      context: ./services/visualization-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/visualization-service/Dockerfile
     container_name: teledetection_visualization
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
