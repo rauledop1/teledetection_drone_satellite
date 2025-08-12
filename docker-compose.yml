@@ -1,0 +1,253 @@
+
+
+services:
+  # Database Services
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: teledetection_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-teledetection}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schemas:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - teledetection_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: teledetection_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - teledetection_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: ./services/api-gateway/Dockerfile
+    container_name: teledetection_api_gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-teledetection}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teledetection_network
+    volumes:
+      - ./logs:/app/logs
+
+  # Authentication Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: ./services/auth-service/Dockerfile
+    container_name: teledetection_auth
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-teledetection}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teledetection_network
+    volumes:
+      - ./logs:/app/logs
+
+  # File Management Service
+  file-service:
+    build:
+      context: .
+      dockerfile: ./services/file-service/Dockerfile
+    container_name: teledetection_file_service
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-teledetection}
+      - REDIS_URL=redis://redis:6379
+      - STORAGE_PATH=/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teledetection_network
+    volumes:
+      - file_storage:/app/storage
+      - ./logs:/app/logs
+
+  # WebODM Integration Service
+  webodm-service:
+    build:
+      context: .
+      dockerfile: ./services/webodm-service/Dockerfile
+    container_name: teledetection_webodm
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-teledetection}
+      - REDIS_URL=redis://redis:6379
+      - WEBODM_API_URL=${WEBODM_API_URL:-http://localhost:8080}
+      - WEBODM_API_TOKEN=${WEBODM_API_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teledetection_network
+    volumes:
+      - ./logs:/app/logs
+
+  # Google Earth Engine Service
+  gee-service:
+    build:
+      context: .
+      dockerfile: ./services/gee-service/Dockerfile
+    container_name: teledetection_gee
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-teledetection}
+      - REDIS_URL=redis://redis:6379
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/gee-service-account.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teledetection_network
+    volumes:
+      - ./credentials:/app/credentials
+      - ./logs:/app/logs
+
+  # Processing Pipeline Service
+  processing-service:
+    build:
+      context: .
+      dockerfile: ./services/processing-service/Dockerfile
+    container_name: teledetection_processing
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-teledetection}
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teledetection_network
+    volumes:
+      - file_storage:/app/storage
+      - ./logs:/app/logs
+
+  # Analysis Service
+  analysis-service:
+    build:
+      context: .
+      dockerfile: ./services/analysis-service/Dockerfile
+    container_name: teledetection_analysis
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-teledetection}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teledetection_network
+    volumes:
+      - file_storage:/app/storage
+      - ./logs:/app/logs
+
+  # Visualization Service
+  visualization-service:
+    build:
+      context: .
+      dockerfile: ./services/visualization-service/Dockerfile
+    container_name: teledetection_visualization
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-teledetection}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teledetection_network
+    volumes:
+      - file_storage:/app/storage
+      - ./logs:/app/logs
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: teledetection_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=${NODE_ENV:-development}
+    depends_on:
+      - api-gateway
+    networks:
+      - teledetection_network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: teledetection_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - api-gateway
+      - frontend
+    networks:
+      - teledetection_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  file_storage:
+
+networks:
+  teledetection_network:
+    driver: bridge
